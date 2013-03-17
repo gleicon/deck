@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>reveal.js - The HTML Presentation Framework</title>
+
+		<meta name="description" content="A framework for easily creating beautiful presentations using HTML">
+		<meta name="author" content="Hakim El Hattab">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="css/reveal.min.css">
+		<link rel="stylesheet" href="css/theme/default.css" id="theme">
+		
+		<link rel="stylesheet" href="css/messenger.css">
+		<link rel="stylesheet" href="css/messenger-theme-future.css">
+
+		<!-- For syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- If the query includes 'print-pdf', use the PDF print sheet -->
+		<script>
+			document.write( '<link rel="stylesheet" href="css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+
+				<section>
+					<h1>Cyclone</h1>
+					<h3>Event-driven Web App Framework for Python</h3>
+					<p>
+						<small><a href="http://cyclone.io">cyclone.io</a></small>
+					</p>
+				</section>
+
+				<section>
+                <h2>What</h2>
+                    <ul>
+                        <li>Event-driven (based on twisted)</li>
+                        <li>Tornado compatible API</li>
+                        <li>Redis and SQLite bundled support</li>
+                        <li>Template app generator</li>
+                    </ul>
+
+				</section>
+
+				<section>
+					<h2>History</h2>
+                    <ul>
+                        <li>Tornado - python + ioloop (ANSI C) </li>
+                        <li>Tornado + Twisted </li>
+                        <li>Cyclone + Twisted + i18n + async http client</li>
+                        <li>All above + Redis + SQLite + Websockets + SSE</li>
+                        <li>Code got ported back to Tornado (i18n, httpclient)</li>
+					</ul>
+				</section>
+				
+                <section>
+					<h2>Support</h2>
+                    <ul>
+                        <li>XML-RPC, JSON-RPC, WebSockets and Server-sent Events</li>
+                        <li>Email with attachments handler and Unix Domain Sockets</p>
+                        <li>OpenID and OAuth (Twitter, FriendFeed, Google, Facebook and Github)</li>
+                        <li>Email with attachments handler and Unix Domain Sockets</li>
+					</ul>
+				</section>
+
+				<section>
+					<h2>Twisted</h2>
+					<p>
+                    Mature, event driven framework. Lots of protocols, Future based programming. Multi OS Reactor, etc, etc
+                    </p>
+                    <pre><code>
+from twisted.internet import reactor, defer
+from twisted.web.client import getPage
+from twisted.internet.defer import DeferredList
+
+def listCallback(results):
+    print results
+
+def test():
+# Deferred = Generator func
+    d1 = getPage('http://www.google.com')
+    d1.addCallback(listCallback) # attach callback
+
+test()
+reactor.run()  #fire reactor
+                </code>
+           </pre>
+
+                </section>
+				<section>
+					<h2>Twisted Web</h2>
+					<p>
+                    HTTP Protocol for twisted
+                    </p>
+
+                    <pre><code>
+from twisted.web import server, resource
+from twisted.internet import reactor
+
+class Simple(resource.Resource):
+    isLeaf = True
+    def render_GET(self, request):
+        return "<html>Hello, world!</html>"
+
+site = server.Site(Simple())
+reactor.listenTCP(8888, site)
+reactor.run()
+                    </code></pre>
+				</section>
+				<section>
+					<h2>Twisted Style</h2>
+    <p> Twisted application (.tac) run with twistd -ny </p>
+                    <pre><code>
+    import cyclone.web
+    from twisted.application import internet
+    from twisted.application import service
+
+    class MainHandler(cyclone.web.RequestHandler):
+        def get(self):
+            self.write("Hello, world")
+
+    webapp = cyclone.web.Application([
+        (r"/", MainHandler)
+    ])
+    application = service.Application("helloworld_twistd")
+    server = internet.TCPServer(8888, webapp, interface="127.0.0.1")
+    server.setServiceParent(application)  
+                    </code></pre>
+				</section>
+				
+                <section>
+					<h2>Tornado Style</h2>
+                <p> Standard .py application </p>
+                    <pre><code>
+import cyclone.web
+
+from twisted.internet import reactor
+from twisted.python import log
+
+class MainHandler(cyclone.web.RequestHandler):
+    def get(self):
+        self.write("Hello, world")
+
+if __name__ == "__main__":
+    application = cyclone.web.Application([
+        (r"/", MainHandler)
+    ])
+
+    reactor.listenTCP(8888, application, interface="127.0.0.1")
+    reactor.run()                    
+                    </code></pre>
+				</section>
+                
+                <section>
+					<h2>Bottle Style</h2>
+                    <p>Clone of Bottle DSL</p>
+                    <pre><code>
+import sys
+from cyclone.bottle import run, route
+
+
+@route("/")
+def index(web):
+    web.write("Hello, world")
+
+run(host="127.0.0.1", port=8888, log=sys.stdout)                    
+                    </code></pre>
+				</section>
+
+                <section>
+					<h2>NGINX + Supervisord setup</h2>
+                    <p><small> note the unix domain socket support</small></p>
+                    <pre><code>
+upstream backend {
+  server localhost:9901;
+  server localhost:9902;
+  server localhost:9903;
+  server localhost:9904;
+  # server unix:/tmp/cyclone.1;
+  # server unix:/tmp/cyclone.2;
+}
+
+server {
+  listen   80;
+  server_name localhost;
+  #access_log /var/log/nginx/access.log;
+
+  location / {
+    proxy_pass        http://backend;
+    proxy_redirect    off;
+    proxy_set_header  Host             $host;
+    proxy_set_header  X-Real-IP        $remote_addr;
+    proxy_set_header  X-Forwarded-For  $proxy_add_x_forwarded_for;
+  }
+}                    
+                    </code></pre>
+				</section>
+                <section>
+					<h2>NGINX + Supervisord setup</h2>
+                    <p><small>4 or more instances, use affinity to proc's core</small></p>
+                    <pre><code>
+[program:mystuff]
+command=/bin/bash /opt/mystuff/start.sh
+redirect_stderr=true
+stdout_logfile=/var/log/mystuff.log
+stdout_logfile_maxbytes=100MB
+
+                    </code></pre>
+				</section>
+                
+                <section>
+					<h2>Demos</h2>
+                    <pre>
+parvati:demos gleicon$ ls
+
+auth        chat        email       fbgraphapi  helloworld  httpclient  
+pycket      rpc         sse         upload      bottle      digest_auth 
+facebook    github_auth httpauth    locale      redis       s3          
+ssl         websocket
+                    </pre>
+				</section>
+
+				<section>
+					<h2>Application Skeletons</h2>
+    <ul style="list-style: none;">
+      <li><small>default - Basic cyclone project</small></li>
+      <li><small>signup -  Basic sign up/in/out, password reset, etc</small></li>
+      <li><small>foreman - Create a foreman based project (suited to run on heroku and other PaaS)</small></li>
+    </ul>
+                    <pre><code>
+parvati:tmp gleicon$ cyclone app --project=test --appskel=default
+parvati:tmp gleicon$ cd test
+parvati:test gleicon$ ls
+README.md frontend  scripts   start.sh  test      test.conf
+parvati:test gleicon$ ls test
+__init__.py config.py   storage.py  utils.py    views.py    web.py
+                    </code></pre>
+				</section>
+
+				<section>
+					<h2>Pros</h2>
+                    <ul>
+                        <li>Web apps along protocols are great (conch for instance)</li>
+                        <li>Twisted is solid</li>
+                        <li>Google, Facebook, Twitter, OAUTH, Github authenticators</li>
+                        <li>Easy start with template apps, everything at hand</li>
+                        <li>Excellent Redis support</li>
+                    </ul>
+				</section>
+				<section>
+					<h2>Cons</h2>
+                    <ul>
+                        <li>F*ck deferreds, even with defer.inlineCallbacks</li>
+                    </ul>
+				</section>
+
+				<section>
+					<h2>RestMQ: A cyclone based application</h2>
+                    <p><small>http://restmq.com</small></p>
+				</section>
+
+				<section>
+					<h2>A message queue for the busy man</h2>
+					<ul style="list-style: none;">
+						<li>HTTP as transport</li>
+						<li>JSON as payload</li>
+						<li>Redis as persistence layer</li>
+						<li>COMET, Websockets and Server-sent Events</li>
+					</ul>
+				</section>
+
+				<section>
+					<h2>oh god why</h2>
+                    <p><small>F*ck protocols and drivers, POST your stuff</small></p>
+                    <pre><code>
+$ curl -X POST -d "value=foobar" http://localhost:8888/q/test
+                    </code></pre>
+                    <p><small>GET next element on queue</small></p>
+                    <pre><code>
+$ curl http://localhost:8888/q/test
+                    </code></pre>
+				</section>
+
+				<section>
+					<h2>Neat stuff</h2>
+                    <p><small>COMET (not long polling)</small></p>
+                    <pre><code>
+$ curl http://localhost:8888/c/test
+                    </code></pre>
+                    <p><small>PAUSE/START the queue w/o disconnecting consumers</small></p>
+                    <pre><code>
+curl -X POST -d "status=stop" http://localhost:8888/control/test
+curl -X POST -d "status=start" http://localhost:8888/control/test
+                    </code></pre>
+				</section>
+
+				<section>
+					<h2>Magnets!</h2>
+						<img src="/img/restmq_internals.png">
+				</section>
+                
+                <section>
+					<h2>Map/Reduce</h2>
+						<img src="/img/restmq_mapred.png">
+				</section>
+                
+                <section>
+					<h2>Map</h2>
+                    <pre><code>
+QUEUENAME = 'reducer'
+
+def wc(file):
+    # counts words for each file
+
+def enqueue(filename, count):
+    try:
+        msg={'filename': filename, 'count':count}
+        data = urllib.urlencode({'queue':QUEUENAME, 'value':json.dumps(msg)})
+        r = urllib2.Request('http://localhost:8888/', data)
+        f = urllib2.urlopen(r)
+        data = f.read()
+        f.close()
+    except urllib2.URLError, e:
+        print e
+                    </code></pre>
+				</section>
+
+                <section>
+					<h2>Reduce</h2>
+                    <pre><code>
+class CometClient(object):
+    def write(self, content):
+        c = content.rstrip('\n').split('\n')
+        data=[]
+        for line in c:
+            if len(line) < 2: continue
+            data.append(json.loads(line))
+        for v in data:
+                val=json.loads(v['value'])
+                log.msg("file: %s count: %s" % (val['filename'], val['count']))
+                self.count=self.count+val['count']
+        log.msg("Total: %d" % self.count)
+
+client.downloadPage("http://localhost:8888/c/reducer", CometClient())
+reactor.run()
+
+                    </code></pre>
+				</section>
+
+
+
+				<section>
+					<h1>The End</h1>
+                    <h3><small>https://github.com/gleicon</small></h3>
+				</section>
+
+			</div>
+
+		</div>
+
+		<script src="/js/jquery-1.8.3.min.js"></script>
+		<script src="/js/underscore-min.js"></script>
+		<script src="/lib/js/head.min.js"></script>
+		<script src="/js/reveal.min.js"></script>
+		<script src="/js/backbone-min.js"></script>
+		<script src="/js/messenger.min.js"></script>
+		<script src="/js/messenger-theme-future.js"></script>
+
+		<script src="/js/{{mode}}.js"></script>
+	</body>
+</html>
