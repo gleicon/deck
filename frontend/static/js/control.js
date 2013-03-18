@@ -17,6 +17,15 @@ Reveal.initialize({
 	]
 });
 
+update = function() {
+    $.get("/event/currentslide", function(data){
+            e = JSON.parse(data)
+            Reveal.navigateTo(e.indexh, e.indexv);
+        });
+}
+
+update();
+
 Reveal.addEventListener('slidechanged', function(event){
 	var c = new Array();
 	h = event.indexh;

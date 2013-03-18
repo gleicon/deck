@@ -271,7 +271,78 @@ __init__.py config.py   storage.py  utils.py    views.py    web.py
                         <li>F*ck deferreds, even with defer.inlineCallbacks</li>
                     </ul>
 				</section>
+                
+                <section>
+					<h2>Deck: remote presentation app</h2>
+                    <p><small>https://github.com/gleicon/deck</small></p>
+				</section>
+                
+                <section>
+					<h2>Remote control your presentation</h2>
+					<ul style="list-style: none;">
+						<li>SSE (Server-sent Events)</li>
+						<li>Reveal.js support</li>
+						<li>Presence/connection pop-up</li>
+						<li>Made with application skeleton</li>
+					</ul>
+				</section>
+				<section>
+					<h2>Dispatcher</h2>
+                    <pre><code>
+class Dispatcher(DatabaseMixin):
+    audience = []
 
+    def subscribe(self, c):
+        self.audience.append(c)
+
+    def unsubscribe(self, c):
+        self.audience.remove(c)
+
+    def broadcast(self, message):
+        for eyes in Dispatcher.audience:
+            eyes.sendEvent(message)
+
+    def presence_count(self):
+        r = len(self.audience)
+        return r
+                    </code></pre>
+				</section>
+				<section>
+					<h2>How we get/send current slide - HTTP style</h2>
+                    <pre><code>
+
+class CurrentSlideHandler(BaseHandler, Dispatcher):
+    @defer.inlineCallbacks
+    def get(self):
+        r = yield self.redis.get("CURRENT_SLIDE")
+        self.write(r)
+
+    @defer.inlineCallbacks
+    def post(self):
+        par = {}
+        par['indexh'] = self.get_argument('indexh', None)
+        par['indexv'] = self.get_argument('indexv', None)
+        if par['indexv'] is not None and par['indexh'] is not None:
+            p = cyclone.escape.json_encode(par)
+            yield self.redis.set("CURRENT_SLIDE", p)
+            self.broadcast(p)
+                    </code></pre>
+				</section>
+
+				<section>
+            <h2>SSE handler</h2>
+                    <pre><code>
+
+class LiveHandler(cyclone.sse.SSEHandler, Dispatcher):
+    def bind(self):
+        self.subscribe(self)
+
+    def unbind(self):
+        self.unsubscribe(self)
+                    </code></pre>
+				</section>
+
+            
 				<section>
 					<h2>RestMQ: A cyclone based application</h2>
                     <p><small>http://restmq.com</small></p>
